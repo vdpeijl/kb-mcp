@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Native binaries (downloaded by postinstall)
+native/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test data
+test-data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Environment
+.env
+.env.local

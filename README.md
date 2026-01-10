@@ -1,0 +1,391 @@
+# @paragin/kb-mcp
+
+MCP (Model Context Protocol) server that indexes multiple Zendesk Help Center knowledge bases and exposes them as searchable tools for AI coding assistants.
+
+## Features
+
+- 🔍 **Vector Search**: Semantic search using Ollama embeddings (nomic-embed-text)
+- 📚 **Multiple Sources**: Index and search across multiple Zendesk knowledge bases
+- 🔄 **Incremental Sync**: Efficient updates - only process changed articles
+- 🚀 **Easy Setup**: Interactive CLI wizard for first-time configuration
+- 🎯 **MCP Compatible**: Works with Claude Code, Cursor, Windsurf, Continue.dev, and Zed
+
+## Prerequisites
+
+### Node.js 20+
+
+Check your version:
+```bash
+node --version
+```
+
+If you need to install or update Node.js, visit [nodejs.org](https://nodejs.org)
+
+### Ollama
+
+Ollama is required for generating embeddings.
+
+**macOS:**
+```bash
+brew install ollama
+```
+
+**Linux:**
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+**Arch Linux:**
+```bash
+pacman -S ollama
+```
+
+**Start Ollama and pull the embedding model:**
+```bash
+ollama serve &
+ollama pull nomic-embed-text
+```
+
+## Installation
+
+### From npm (once published)
+
+```bash
+npm install -g @paragin/kb-mcp
+```
+
+### From source (during development)
+
+```bash
+git clone https://github.com/paragin/kb-mcp.git
+cd kb-mcp
+npm install
+npm run build
+npm link
+```
+
+## Quick Start
+
+### 1. Run interactive setup
+
+```bash
+kb-mcp init
+```
+
+This will:
+- Check if Ollama is running
+- Verify the embedding model is available
+- Help you add your first knowledge base
+- Create the configuration file
+
+### 2. Sync your knowledge base
+
+```bash
+kb-mcp sync
+```
+
+This will:
+- Fetch all articles from your Zendesk Help Center
+- Parse HTML content
+- Split into chunks (~500 tokens with overlap)
+- Generate embeddings using Ollama
+- Store in a local SQLite database with vector search
+
+### 3. Configure your MCP client
+
+```bash
+kb-mcp setup cursor    # or: claude-code, windsurf, continue, zed
+```
+
+Copy the printed configuration to your MCP client's config file.
+
+### 4. Restart your MCP client
+
+The knowledge base will now be available for search!
+
+## Commands
+
+### `kb-mcp init`
+
+Interactive setup wizard. Creates configuration and helps you add your first knowledge base.
+
+### `kb-mcp sync`
+
+Sync all enabled knowledge bases. Only processes articles that have changed since the last sync.
+
+**Options:**
+- `--source <id>` - Sync specific source only
+- `--full` - Full re-sync (re-embed everything)
+
+**Examples:**
+```bash
+kb-mcp sync                    # Sync all enabled sources
+kb-mcp sync --source myco      # Sync specific source
+kb-mcp sync --full             # Full re-sync
+```
+
+### `kb-mcp sources`
+
+Manage knowledge base sources.
+
+**Subcommands:**
+- `list` - List all sources with stats (default)
+- `add` - Add a new source (interactive or with flags)
+- `remove <id>` - Remove a source and its data
+- `enable <id>` - Enable a disabled source
+- `disable <id>` - Disable without removing data
+
+**Examples:**
+```bash
+kb-mcp sources                                    # List all sources
+kb-mcp sources add                                # Interactive add
+kb-mcp sources add --id myco --name "My Company" --url https://support.myco.com --locale en-us
+kb-mcp sources remove myco                        # Remove source
+kb-mcp sources disable myco                       # Disable source
+kb-mcp sources enable myco                        # Enable source
+```
+
+### `kb-mcp serve`
+
+Start the MCP server (stdio). This is normally called by your MCP client, not manually.
+
+### `kb-mcp setup [client]`
+
+Print MCP client configuration. Supports: claude-code, cursor, windsurf, continue, zed.
+
+**Examples:**
+```bash
+kb-mcp setup              # List all clients
+kb-mcp setup cursor       # Show config for Cursor
+```
+
+### `kb-mcp doctor`
+
+Run diagnostics to check:
+- Node.js version
+- Configuration validity
+- Ollama connection
+- Embedding model availability
+- Database accessibility
+- sqlite-vec extension
+
+### `kb-mcp stats`
+
+Show database statistics:
+- Total sources, articles, chunks
+- Database file size
+- Per-source breakdown
+
+## MCP Client Configuration
+
+### Claude Code
+
+Add to `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "kb-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Go to **Settings → Features → MCP Servers**, then add:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "kb-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "kb-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+### Continue.dev
+
+Add to `~/.continue/config.json`:
+
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "kb-mcp",
+          "args": ["serve"]
+        }
+      }
+    ]
+  }
+}
+```
+
+### Zed
+
+Add to `~/.config/zed/settings.json`:
+
+```json
+{
+  "context_servers": {
+    "knowledge-base": {
+      "command": {
+        "path": "kb-mcp",
+        "args": ["serve"]
+      }
+    }
+  }
+}
+```
+
+## MCP Tools
+
+The server exposes two tools to MCP clients:
+
+### `search_knowledge_base`
+
+Search the knowledge base for documentation, guides, and help articles.
+
+**Parameters:**
+- `query` (required): Natural language search query
+- `sources` (optional): Filter by source IDs (array of strings)
+- `limit` (optional): Maximum results (default: 5, max: 20)
+
+**Example usage in Claude Code:**
+> "Search the knowledge base for how to create a new user account"
+
+### `list_sources`
+
+List all configured knowledge base sources and their sync status.
+
+**Example usage in Claude Code:**
+> "List available knowledge bases"
+
+## Configuration
+
+Configuration is stored in XDG-compliant locations:
+
+- **Config**: `~/.config/kb-mcp/config.json`
+- **Data**: `~/.local/share/kb-mcp/kb.sqlite`
+- **Logs**: `~/.local/share/kb-mcp/logs/`
+
+On Windows, these paths use `%APPDATA%` and `%LOCALAPPDATA%` instead.
+
+### Config file structure
+
+```json
+{
+  "ollama": {
+    "baseUrl": "http://localhost:11434",
+    "model": "nomic-embed-text"
+  },
+  "sync": {
+    "chunkSize": 500,
+    "chunkOverlap": 50
+  },
+  "sources": [
+    {
+      "id": "myco",
+      "name": "My Company",
+      "baseUrl": "https://support.myco.com",
+      "locale": "en-us",
+      "enabled": true
+    }
+  ]
+}
+```
+
+## Debug Logging
+
+Enable debug logging with the `DEBUG` environment variable:
+
+```bash
+DEBUG=kb-mcp:* kb-mcp sync
+```
+
+Available namespaces:
+- `kb-mcp:sync` - Sync operations
+- `kb-mcp:embed` - Embedding generation
+- `kb-mcp:search` - Search operations
+- `kb-mcp:mcp` - MCP server
+- `kb-mcp:db` - Database operations
+- `kb-mcp:cli` - CLI commands
+
+## Troubleshooting
+
+### Cannot connect to Ollama
+
+Make sure Ollama is running:
+```bash
+ollama serve
+```
+
+Check if it's accessible:
+```bash
+curl http://localhost:11434/api/tags
+```
+
+### Model not found
+
+Pull the embedding model:
+```bash
+ollama pull nomic-embed-text
+```
+
+### sqlite-vec extension not loaded
+
+Try reinstalling:
+```bash
+npm install -g @paragin/kb-mcp --force
+```
+
+Or manually download from: https://github.com/asg017/sqlite-vec/releases
+
+### Rate limited by Zendesk
+
+The sync process includes exponential backoff for rate limiting. If you're still hitting limits, try:
+- Syncing one source at a time: `kb-mcp sync --source <id>`
+- Waiting a few minutes between syncs
+
+## Testing
+
+### Test MCP server with Inspector
+
+```bash
+npx @modelcontextprotocol/inspector kb-mcp serve
+```
+
+This opens a web interface where you can:
+- See available tools
+- Call tools with test queries
+- Inspect responses
+
+## License
+
+MIT
+
+## Author
+
+Paragin

@@ -1,0 +1,47 @@
+{
+  "name": "@paragin/kb-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for searching Zendesk knowledge bases",
+  "type": "module",
+  "bin": {
+    "kb-mcp": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/src/cli.js",
+    "postinstall": "test -f dist/scripts/postinstall.js && node dist/scripts/postinstall.js || echo 'Skipping postinstall (not built yet)'",
+    "prepublishOnly": "npm run build",
+    "dev": "tsc --watch"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "better-sqlite3": "^11.7.0",
+    "cheerio": "^1.0.0",
+    "citty": "^0.1.6",
+    "debug": "^4.3.7",
+    "tar": "^7.5.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^20.17.10",
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "mcp",
+    "zendesk",
+    "knowledge-base",
+    "search",
+    "ai",
+    "claude"
+  ],
+  "author": "Paragin",
+  "license": "MIT"
+}
