@@ -2,6 +2,7 @@ import { defineCommand } from 'citty';
 import { existsSync, rmSync, readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import { execSync } from 'child_process';
 import { exitWithError } from '../utils/errors.js';
 import { getXDGPaths } from '../config/paths.js';
 
@@ -30,17 +31,19 @@ interface ContinueConfig {
   };
 }
 
-const CLIENT_CONFIGS = [
+interface ClientConfig {
+  name: string;
+  useCli?: boolean;
+  cliCommand?: string;
+  path?: string;
+  removeEntry?: (config: any) => boolean;
+}
+
+const CLIENT_CONFIGS: ClientConfig[] = [
   {
     name: 'Claude Code',
-    path: join(homedir(), '.claude', 'claude_desktop_config.json'),
-    removeEntry: (config: McpServers) => {
-      if (config.mcpServers?.['knowledge-base']) {
-        delete config.mcpServers['knowledge-base'];
-        return true;
-      }
-      return false;
-    },
+    useCli: true,
+    cliCommand: 'claude mcp remove knowledge-base',
   },
   {
     name: 'Cursor',
@@ -96,11 +99,30 @@ function removeFromMcpConfigs(): string[] {
   const removed: string[] = [];
 
   for (const client of CLIENT_CONFIGS) {
-    if (!existsSync(client.path)) {
-      continue;
-    }
-
     try {
+      // Handle CLI-based removal (Claude Code)
+      if (client.useCli && client.cliCommand) {
+        try {
+          execSync(client.cliCommand, { stdio: 'pipe' });
+          removed.push(client.name);
+        } catch (error: any) {
+          // Silently skip if CLI not found or server not installed
+          if (!error.message?.includes('command not found') && !error.message?.includes('not found')) {
+            console.warn(`⚠ Failed to remove ${client.name} via CLI: ${error.message}`);
+          }
+        }
+        continue;
+      }
+
+      // Handle file-based removal
+      if (!client.path || !client.removeEntry) {
+        continue;
+      }
+
+      if (!existsSync(client.path)) {
+        continue;
+      }
+
       const content = readFileSync(client.path, 'utf-8');
       const config = JSON.parse(content);
 
