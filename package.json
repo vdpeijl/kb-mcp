@@ -1,5 +1,5 @@
 {
-  "name": "@paragin/kb-mcp",
+  "name": "@vdpeijl/kb-mcp",
   "version": "0.1.0",
   "description": "MCP server for searching Zendesk knowledge bases",
   "type": "module",
@@ -7,8 +7,7 @@
     "kb-mcp": "./dist/src/cli.js"
   },
   "files": [
-    "dist",
-    "scripts"
+    "dist"
   ],
   "scripts": {
     "build": "tsc && chmod +x dist/src/cli.js",
@@ -42,6 +41,9 @@
     "ai",
     "claude"
   ],
-  "author": "Paragin",
-  "license": "MIT"
+  "author": "vdpeijl",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
 }

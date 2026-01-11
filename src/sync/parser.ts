@@ -4,6 +4,11 @@ import * as cheerio from 'cheerio';
  * Strip HTML and extract clean text from article body
  */
 export function parseHTML(html: string): string {
+  // Handle cases where html is not a string (null, undefined, etc.)
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+
   const $ = cheerio.load(html);
 
   // Remove script and style tags
@@ -25,6 +30,11 @@ export function parseHTML(html: string): string {
  * Parse HTML with better handling of lists and structure
  */
 export function parseHTMLStructured(html: string): string {
+  // Handle cases where html is not a string (null, undefined, etc.)
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+
   const $ = cheerio.load(html);
 
   // Remove unwanted elements

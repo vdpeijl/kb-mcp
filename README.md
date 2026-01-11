@@ -1,4 +1,4 @@
-# @paragin/kb-mcp
+# @vdpeijl/kb-mcp
 
 MCP (Model Context Protocol) server that indexes multiple Zendesk Help Center knowledge bases and exposes them as searchable tools for AI coding assistants.
 
@@ -51,7 +51,7 @@ ollama pull nomic-embed-text
 ### From npm (once published)
 
 ```bash
-npm install -g @paragin/kb-mcp
+npm install -g @vdpeijl/kb-mcp
 ```
 
 ### From source (during development)
@@ -358,7 +358,7 @@ ollama pull nomic-embed-text
 
 Try reinstalling:
 ```bash
-npm install -g @paragin/kb-mcp --force
+npm install -g @vdpeijl/kb-mcp --force
 ```
 
 Or manually download from: https://github.com/asg017/sqlite-vec/releases
@@ -382,10 +382,35 @@ This opens a web interface where you can:
 - Call tools with test queries
 - Inspect responses
 
+## Development
+
+### Publishing a new version
+
+This project uses GitHub Actions to automatically publish to npm when the version changes in `package.json`.
+
+To release a new version:
+
+```bash
+# Bump version (choose one)
+npm version patch  # Bug fixes (0.1.0 → 0.1.1)
+npm version minor  # New features (0.1.0 → 0.2.0)
+npm version major  # Breaking changes (0.1.0 → 1.0.0)
+
+# Push to GitHub (this triggers the publish workflow)
+git push origin main --follow-tags
+```
+
+The GitHub Action will automatically:
+- Build the project
+- Publish to npm
+- Create a GitHub release
+
+See [.github/workflows/README.md](.github/workflows/README.md) for setup instructions.
+
 ## License
 
 MIT
 
 ## Author
 
-Paragin
+vdpeijl

@@ -1,0 +1,77 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check if version changed
+        id: version-check
+        run: |
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          # Check if this is the first commit or if version changed in this push
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            PREV_VERSION=$(git show HEAD~1:package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')).version")
+            echo "previous_version=$PREV_VERSION" >> $GITHUB_OUTPUT
+
+            if [ "$CURRENT_VERSION" != "$PREV_VERSION" ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Version changed from $PREV_VERSION to $CURRENT_VERSION"
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "Version unchanged: $CURRENT_VERSION"
+            fi
+          else
+            # First commit, always publish
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "First commit, will publish version $CURRENT_VERSION"
+          fi
+
+      - name: Install dependencies
+        if: steps.version-check.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Build
+        if: steps.version-check.outputs.changed == 'true'
+        run: npm run build
+
+      - name: Publish to npm
+        if: steps.version-check.outputs.changed == 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.version-check.outputs.changed == 'true'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version-check.outputs.current_version }}
+          release_name: Release v${{ steps.version-check.outputs.current_version }}
+          body: |
+            Published to npm: [@vdpeijl/kb-mcp@${{ steps.version-check.outputs.current_version }}](https://www.npmjs.com/package/@vdpeijl/kb-mcp/v/${{ steps.version-check.outputs.current_version }})
+          draft: false
+          prerelease: false

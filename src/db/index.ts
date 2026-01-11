@@ -59,7 +59,7 @@ export async function getDatabase(): Promise<Database.Database> {
       if (error.message.includes('cannot open shared object file')) {
         throw new Error(
           `Failed to load sqlite-vec extension.\n\n` +
-          `Try reinstalling: npm install -g @paragin/kb-mcp --force\n\n` +
+          `Try reinstalling: npm install -g @vdpeijl/kb-mcp --force\n\n` +
           `Or manually download from:\n` +
           `https://github.com/asg017/sqlite-vec/releases`
         );
