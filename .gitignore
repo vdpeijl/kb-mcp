@@ -31,3 +31,8 @@ test-data/
 # Environment
 .env
 .env.local
+
+# Claude Code
+CLAUDE.md
+.claude_prompt
+BUILD_PROMPT.md
