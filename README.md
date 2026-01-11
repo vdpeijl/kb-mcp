@@ -7,8 +7,9 @@ MCP (Model Context Protocol) server that indexes multiple Zendesk Help Center kn
 - 🔍 **Vector Search**: Semantic search using Ollama embeddings (nomic-embed-text)
 - 📚 **Multiple Sources**: Index and search across multiple Zendesk knowledge bases
 - 🔄 **Incremental Sync**: Efficient updates - only process changed articles
-- 🚀 **Easy Setup**: Interactive CLI wizard for first-time configuration
+- 🚀 **Easy Setup**: Interactive CLI wizard + automated Claude Code configuration
 - 🎯 **MCP Compatible**: Works with Claude Code, Cursor, Windsurf, Continue.dev, and Zed
+- 🛠️ **Version Manager Support**: Compatible with fnm, nvm, volta, asdf via shell wrapper
 
 ## Prerequisites
 
@@ -48,16 +49,16 @@ ollama pull nomic-embed-text
 
 ## Installation
 
-### From npm (once published)
+### From npm
 
 ```bash
 npm install -g @vdpeijl/kb-mcp
 ```
 
-### From source (during development)
+### From source
 
 ```bash
-git clone https://github.com/paragin/kb-mcp.git
+git clone https://github.com/vdpeijl/kb-mcp.git
 cd kb-mcp
 npm install
 npm run build
@@ -93,11 +94,13 @@ This will:
 
 ### 3. Configure your MCP client
 
+**For Claude Code (automated):**
 ```bash
-kb-mcp setup cursor    # or: claude-code, windsurf, continue, zed
+kb-mcp setup claude-code
 ```
 
-Copy the printed configuration to your MCP client's config file.
+**For other MCP clients:**
+See the [MCP Client Configuration](#mcp-client-configuration) section below for manual setup instructions.
 
 ### 4. Restart your MCP client
 
@@ -151,13 +154,15 @@ Start the MCP server (stdio). This is normally called by your MCP client, not ma
 
 ### `kb-mcp setup [client]`
 
-Print MCP client configuration. Supports: claude-code, cursor, windsurf, continue, zed.
+Automatically configure MCP clients. Currently supports: claude-code.
 
 **Examples:**
 ```bash
-kb-mcp setup              # List all clients
-kb-mcp setup cursor       # Show config for Cursor
+kb-mcp setup              # List available clients
+kb-mcp setup claude-code  # Automatically configure Claude Code
 ```
+
+**Note:** For other MCP clients (Cursor, Windsurf, Continue.dev, Zed), see the manual configuration instructions below.
 
 ### `kb-mcp doctor`
 
@@ -176,89 +181,68 @@ Show database statistics:
 - Database file size
 - Per-source breakdown
 
+### `kb-mcp uninstall`
+
+Remove kb-mcp data and MCP server configurations.
+
+**Options:**
+- `--keep-data` - Keep database and config files, only remove from MCP clients
+
+**Examples:**
+```bash
+kb-mcp uninstall              # Full uninstall (removes data + MCP configs)
+kb-mcp uninstall --keep-data  # Only remove MCP config, keep data
+```
+
+This command will:
+- Remove the MCP server entry from Claude Code (via `claude mcp remove`)
+- Remove the data directory (`~/.local/share/kb-mcp/`)
+- Remove the config directory (`~/.config/kb-mcp/`)
+
+After running, you can completely remove the package with:
+```bash
+npm uninstall -g @vdpeijl/kb-mcp
+```
+
 ## MCP Client Configuration
 
 ### Claude Code
 
-Add to `~/.claude/claude_desktop_config.json`:
+**Automated setup (recommended):**
+```bash
+kb-mcp setup claude-code
+```
 
+**Manual setup:**
+The setup command runs: `claude mcp add --transport stdio knowledge-base -- bash -l -c "kb-mcp serve"`
+
+This uses a shell wrapper (`bash -l -c`) for compatibility with node version managers (fnm, nvm, volta, asdf).
+
+### Other MCP Clients
+
+While kb-mcp is compatible with all MCP clients (Cursor, Windsurf, Continue.dev, Zed, etc.), automated setup is currently only available for Claude Code.
+
+**Manual configuration:**
+Add kb-mcp to your MCP client's configuration file using:
 ```json
 {
-  "mcpServers": {
-    "knowledge-base": {
-      "command": "kb-mcp",
-      "args": ["serve"]
-    }
-  }
+  "command": "bash",
+  "args": ["-l", "-c", "kb-mcp serve"]
 }
 ```
 
-### Cursor
+> **Note:** The shell wrapper (`bash -l -c`) ensures compatibility with node version managers like fnm, nvm, volta, and asdf.
 
-Go to **Settings → Features → MCP Servers**, then add:
+**Want to add automated setup for your favorite MCP client?**
 
-```json
-{
-  "mcpServers": {
-    "knowledge-base": {
-      "command": "kb-mcp",
-      "args": ["serve"]
-    }
-  }
-}
-```
+We welcome contributions! The codebase has an extensible architecture that makes it easy to add support for new clients:
 
-### Windsurf
+1. See the commented examples in [`src/commands/setup.ts`](src/commands/setup.ts) and [`src/commands/uninstall.ts`](src/commands/uninstall.ts)
+2. Add your client configuration to the `CLIENT_CONFIGS` array
+3. Implement the setup/remove functions
+4. Submit a pull request!
 
-Add to `~/.codeium/windsurf/mcp_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "knowledge-base": {
-      "command": "kb-mcp",
-      "args": ["serve"]
-    }
-  }
-}
-```
-
-### Continue.dev
-
-Add to `~/.continue/config.json`:
-
-```json
-{
-  "experimental": {
-    "modelContextProtocolServers": [
-      {
-        "transport": {
-          "type": "stdio",
-          "command": "kb-mcp",
-          "args": ["serve"]
-        }
-      }
-    ]
-  }
-}
-```
-
-### Zed
-
-Add to `~/.config/zed/settings.json`:
-
-```json
-{
-  "context_servers": {
-    "knowledge-base": {
-      "command": {
-        "path": "kb-mcp",
-        "args": ["serve"]
-      }
-    }
-  }
-}
-```
+For CLI-based clients (like Claude Code), use `execSync()`. For file-based clients, use the `setupJsonClient()` helper. Check the code for detailed examples.
 
 ## MCP Tools
 

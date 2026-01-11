@@ -1,137 +1,99 @@
 import { defineCommand } from 'citty';
 import { existsSync, rmSync, readFileSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
 import { execSync } from 'child_process';
 import { exitWithError } from '../utils/errors.js';
 import { getXDGPaths } from '../config/paths.js';
 
-interface McpServerConfig {
-  command: string;
-  args?: string[];
-}
-
-interface McpServers {
-  mcpServers?: Record<string, McpServerConfig>;
-}
-
-interface ZedConfig {
-  context_servers?: Record<string, { command: { path: string; args: string[] } }>;
-}
-
-interface ContinueConfig {
-  experimental?: {
-    modelContextProtocolServers?: Array<{
-      transport: {
-        type: string;
-        command: string;
-        args: string[];
-      };
-    }>;
-  };
-}
-
+/**
+ * Client configuration interface
+ *
+ * To add a new client, create a new entry in CLIENT_CONFIGS array below
+ */
 interface ClientConfig {
+  /** Display name */
   name: string;
-  useCli?: boolean;
-  cliCommand?: string;
-  path?: string;
-  removeEntry?: (config: any) => boolean;
+  /** Remove function that removes kb-mcp from the client config */
+  remove: () => boolean;
 }
 
+/**
+ * Helper function to remove kb-mcp from JSON-based MCP clients
+ * Reads config, removes the entry, and writes back
+ */
+function removeFromJsonClient(
+  configPath: string,
+  clientName: string,
+  remover: (config: any) => boolean
+): boolean {
+  if (!existsSync(configPath)) {
+    return false;
+  }
+
+  try {
+    const content = readFileSync(configPath, 'utf-8');
+    const config = JSON.parse(content);
+
+    if (remover(config)) {
+      writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.warn(`⚠ Failed to update ${clientName} config: ${error}`);
+    return false;
+  }
+}
+
+/**
+ * MCP Client configurations
+ *
+ * To add support for a new client:
+ * 1. Add a new entry to this array
+ * 2. Implement the remove() function that returns true if kb-mcp was removed
+ * 3. For CLI-based clients, use execSync()
+ * 4. For file-based clients, use removeFromJsonClient() helper
+ */
 const CLIENT_CONFIGS: ClientConfig[] = [
   {
     name: 'Claude Code',
-    useCli: true,
-    cliCommand: 'claude mcp remove knowledge-base',
-  },
-  {
-    name: 'Cursor',
-    path: join(homedir(), '.cursor', 'mcp.json'),
-    removeEntry: (config: McpServers) => {
-      if (config.mcpServers?.['knowledge-base']) {
-        delete config.mcpServers['knowledge-base'];
+    remove: () => {
+      try {
+        execSync('claude mcp remove knowledge-base', { stdio: 'pipe' });
         return true;
+      } catch (error: any) {
+        // Silently skip if CLI not found or server not installed
+        if (!error.message?.includes('command not found') && !error.message?.includes('not found')) {
+          console.warn(`⚠ Failed to remove from Claude Code via CLI: ${error.message}`);
+        }
+        return false;
       }
-      return false;
     },
   },
-  {
-    name: 'Windsurf',
-    path: join(homedir(), '.codeium', 'windsurf', 'mcp_config.json'),
-    removeEntry: (config: McpServers) => {
-      if (config.mcpServers?.['knowledge-base']) {
-        delete config.mcpServers['knowledge-base'];
-        return true;
-      }
-      return false;
-    },
-  },
-  {
-    name: 'Zed',
-    path: join(homedir(), '.config', 'zed', 'settings.json'),
-    removeEntry: (config: ZedConfig) => {
-      if (config.context_servers?.['knowledge-base']) {
-        delete config.context_servers['knowledge-base'];
-        return true;
-      }
-      return false;
-    },
-  },
-  {
-    name: 'Continue.dev',
-    path: join(homedir(), '.continue', 'config.json'),
-    removeEntry: (config: ContinueConfig) => {
-      if (config.experimental?.modelContextProtocolServers) {
-        const servers = config.experimental.modelContextProtocolServers;
-        const initialLength = servers.length;
-        config.experimental.modelContextProtocolServers = servers.filter(
-          server => !server.transport.command.includes('kb-mcp')
-        );
-        return servers.length !== initialLength;
-      }
-      return false;
-    },
-  },
+  // Example: How to add a file-based client (commented out)
+  // {
+  //   name: 'Cursor',
+  //   remove: () => {
+  //     return removeFromJsonClient(
+  //       join(homedir(), '.cursor', 'mcp.json'),
+  //       'Cursor',
+  //       (config) => {
+  //         if (config.mcpServers?.['knowledge-base']) {
+  //           delete config.mcpServers['knowledge-base'];
+  //           return true;
+  //         }
+  //         return false;
+  //       }
+  //     );
+  //   },
+  // },
 ];
 
 function removeFromMcpConfigs(): string[] {
   const removed: string[] = [];
 
   for (const client of CLIENT_CONFIGS) {
-    try {
-      // Handle CLI-based removal (Claude Code)
-      if (client.useCli && client.cliCommand) {
-        try {
-          execSync(client.cliCommand, { stdio: 'pipe' });
-          removed.push(client.name);
-        } catch (error: any) {
-          // Silently skip if CLI not found or server not installed
-          if (!error.message?.includes('command not found') && !error.message?.includes('not found')) {
-            console.warn(`⚠ Failed to remove ${client.name} via CLI: ${error.message}`);
-          }
-        }
-        continue;
-      }
-
-      // Handle file-based removal
-      if (!client.path || !client.removeEntry) {
-        continue;
-      }
-
-      if (!existsSync(client.path)) {
-        continue;
-      }
-
-      const content = readFileSync(client.path, 'utf-8');
-      const config = JSON.parse(content);
-
-      if (client.removeEntry(config)) {
-        writeFileSync(client.path, JSON.stringify(config, null, 2) + '\n', 'utf-8');
-        removed.push(client.name);
-      }
-    } catch (error) {
-      console.warn(`⚠ Failed to update ${client.name} config: ${error}`);
+    if (client.remove()) {
+      removed.push(client.name);
     }
   }
 
