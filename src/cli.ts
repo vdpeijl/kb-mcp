@@ -15,6 +15,7 @@ const main = defineCommand({
     sync: () => import('./commands/sync.js').then(m => m.default),
     sources: () => import('./commands/sources.js').then(m => m.default),
     setup: () => import('./commands/setup.js').then(m => m.default),
+    uninstall: () => import('./commands/uninstall.js').then(m => m.default),
     doctor: () => import('./commands/doctor.js').then(m => m.default),
     stats: () => import('./commands/stats.js').then(m => m.default),
   },

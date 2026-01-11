@@ -25,11 +25,15 @@ npm run build
 npm link
 
 # Run CLI commands
-kb-mcp init          # Interactive setup
-kb-mcp sync          # Sync knowledge bases
-kb-mcp serve         # Start MCP server (stdio)
-kb-mcp doctor        # Diagnostics check
-kb-mcp sources       # Manage sources
+kb-mcp init                   # Interactive setup
+kb-mcp sync                   # Sync knowledge bases
+kb-mcp serve                  # Start MCP server (stdio)
+kb-mcp setup <client>         # Auto-configure MCP client (claude-code, cursor, windsurf, continue, zed)
+kb-mcp uninstall              # Remove kb-mcp data and MCP configs
+kb-mcp uninstall --keep-data  # Remove only MCP configs, keep data
+kb-mcp doctor                 # Diagnostics check
+kb-mcp sources                # Manage sources
+kb-mcp stats                  # Show database statistics
 
 # Test MCP server with inspector
 npx @modelcontextprotocol/inspector kb-mcp serve
@@ -37,6 +41,23 @@ npx @modelcontextprotocol/inspector kb-mcp serve
 # Debug logging
 DEBUG=kb-mcp:* kb-mcp sync
 ```
+
+## Setup and Uninstall
+
+### Automatic Setup
+The `kb-mcp setup` command automatically configures MCP clients:
+- **Claude Code**: Runs `claude mcp add` command
+- **Other clients**: Directly modifies their JSON config files
+
+All clients use shell wrapper (`bash -l -c "kb-mcp serve"`) for compatibility with node version managers (fnm, nvm, volta, asdf).
+
+### Uninstall
+The `kb-mcp uninstall` command removes:
+- MCP server entries from all client configs
+- Data directory (`~/.local/share/kb-mcp/`)
+- Config directory (`~/.config/kb-mcp/`)
+
+Use `--keep-data` to only remove MCP config entries while preserving local data.
 
 ## Architecture
 
