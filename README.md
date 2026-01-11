@@ -8,7 +8,7 @@ MCP (Model Context Protocol) server that indexes multiple Zendesk Help Center kn
 - 📚 **Multiple Sources**: Index and search across multiple Zendesk knowledge bases
 - 🔄 **Incremental Sync**: Efficient updates - only process changed articles
 - 🚀 **Easy Setup**: Interactive CLI wizard + automated Claude Code configuration
-- 🎯 **MCP Compatible**: Works with Claude Code, Cursor, Windsurf, Continue.dev, and Zed
+- 🎯 **MCP Compatible**: Works with all MCP clients (automated setup for Claude Code)
 - 🛠️ **Version Manager Support**: Compatible with fnm, nvm, volta, asdf via shell wrapper
 
 ## Prerequisites
